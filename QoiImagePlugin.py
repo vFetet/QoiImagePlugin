@@ -293,8 +293,9 @@ def _save(im, fp, filename, save_all=False):
     fp.write(QOI_EOF_MARKER)
 
 
-Image.register_open(QoiImageFile.format, QoiImageFile, _accept)
-Image.register_extension(QoiImageFile.format, '.qoi')
-Image.register_decoder('qoi', QoiDecoder)
-Image.register_encoder('qoi', QoiEncoder)
-Image.register_save(QoiImageFile.format, _save)
+if '.qoi' not in Image.registered_extensions():
+    Image.register_extension(QoiImageFile.format, '.qoi')
+    Image.register_open(QoiImageFile.format, QoiImageFile, _accept)
+    Image.register_decoder('qoi', QoiDecoder)
+    Image.register_encoder('qoi', QoiEncoder)
+    Image.register_save(QoiImageFile.format, _save)
