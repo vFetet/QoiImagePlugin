@@ -63,10 +63,8 @@ class QoiImageFile(ImageFile.ImageFile):
         self.fp.seek(4)
         self._size = struct.unpack('>II', self.fp.read(8))
         channels = struct.unpack('B', self.fp.read(1))[0]
-        # FIXME: save colorspace info to image file somehow?
-        # colorspace can be sRGB w/ linear alpha or all linear
-        colorspace = struct.unpack('B', self.fp.read(1))[0]
         self.mode = 'RGB' if channels == QOI_HEADER_RGB else 'RGBA'
+        self.info['colorspace'] = struct.unpack('B', self.fp.read(1))[0]
 
         self.tile = [('qoi', (0, 0) + self.size, 14, None)]
 
@@ -266,9 +264,11 @@ def _save(im, fp, filename, save_all=False):
     fp.write(QOI_MAGIC)
     fp.write(struct.pack('>II', im.size[0], im.size[1]))
     fp.write(struct.pack('>B', 4 if im.mode == 'RGBA' else 3))
-    # FIXME: pull colorspace info (sRGB w/ linear alpha or all linear)
-    # from image object
-    fp.write(struct.pack('>B', QOI_HEADER_SRGB))
+    if ('colorspace' in im.info 
+        and im.info['colorspace'] in [QOI_HEADER_LINEAR, QOI_HEADER_SRGB]):        
+        fp.write(struct.pack('B', im.info['colorspace']))
+    else:
+        fp.write(struct.pack('B', QOI_HEADER_SRGB))
 
     im.load()
     if not hasattr(im, "encoderconfig"):
