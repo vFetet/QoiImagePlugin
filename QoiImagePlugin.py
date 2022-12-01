@@ -28,6 +28,7 @@ SOFTWARE.
 """
 
 import struct
+from functools import cache
 from PIL import Image, ImageFile
 
 
@@ -50,6 +51,7 @@ def _accept(prefix):
     return prefix[:4] == QOI_MAGIC
 
 
+@cache
 def _pixel_hash(pixel):
     r, g, b, a = pixel
     return (r * 3 + g * 5 + b * 7 + a * 11) % 64
