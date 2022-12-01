@@ -28,6 +28,7 @@ SOFTWARE.
 """
 
 import struct
+from functools import cache
 from PIL import Image, ImageFile
 
 
@@ -50,12 +51,17 @@ def _accept(prefix):
     return prefix[:4] == QOI_MAGIC
 
 
+@cache
 def _pixel_hash(pixel):
     r, g, b, a = pixel
     return (r * 3 + g * 5 + b * 7 + a * 11) % 64
 
 
 class QoiImageFile(ImageFile.ImageFile):
+    """
+    Image plugin for the QOI format (Quite OK Image format)
+    """
+
     format = 'qoi'
     format_description = 'qoi format'
 
@@ -70,6 +76,9 @@ class QoiImageFile(ImageFile.ImageFile):
 
 
 class QoiDecoder(ImageFile.PyDecoder):
+    """
+    Decoder for QOI image files
+    """
 
     def __init__(self, mode, *args):
         super().__init__(mode, args)
@@ -133,10 +142,10 @@ class QoiDecoder(ImageFile.PyDecoder):
         return i, 0
 
     def cleanup(self):
-        del(self.cache)
-        del(self.current_pixel)
-        del(self.x)
-        del(self.y)
+        del self.cache
+        del self.current_pixel
+        del self.x
+        del self.y
 
     def _set_pixel(self):
         if self.im.mode == 'RGBA':
@@ -144,9 +153,7 @@ class QoiDecoder(ImageFile.PyDecoder):
                              self.current_pixel)
         else:
             self.im.putpixel((self.x, self.y),
-                             (self.current_pixel[0],
-                              self.current_pixel[1],
-                              self.current_pixel[2]))
+                             self.current_pixel[:3])
         self.x += 1
         if self.x >= self.im.size[0]:
             self.y += 1
@@ -154,6 +161,9 @@ class QoiDecoder(ImageFile.PyDecoder):
 
 
 class QoiEncoder(ImageFile.PyEncoder):
+    """
+    Encoder for QOI image files
+    """
 
     def __init__(self, mode, *args):
         super().__init__(mode, args)
@@ -250,12 +260,12 @@ class QoiEncoder(ImageFile.PyEncoder):
         self.eof = self.y >= self.im.size[1]
 
     def cleanup(self):
-        del(self.cache)
-        del(self.previous_pixel)
-        del(self.x)
-        del(self.y)
-        del(self.run)
-        del(self.eof)
+        del self.cache
+        del self.previous_pixel
+        del self.x
+        del self.y
+        del self.run
+        del self.eof
 
 
 def _save(im, fp, filename, save_all=False):
@@ -264,8 +274,8 @@ def _save(im, fp, filename, save_all=False):
     fp.write(QOI_MAGIC)
     fp.write(struct.pack('>II', im.size[0], im.size[1]))
     fp.write(struct.pack('>B', 4 if im.mode == 'RGBA' else 3))
-    if ('colorspace' in im.info 
-        and im.info['colorspace'] in [QOI_HEADER_LINEAR, QOI_HEADER_SRGB]):        
+    if ('colorspace' in im.info
+        and im.info['colorspace'] in [QOI_HEADER_LINEAR, QOI_HEADER_SRGB]):
         fp.write(struct.pack('B', im.info['colorspace']))
     else:
         fp.write(struct.pack('B', QOI_HEADER_SRGB))
@@ -299,3 +309,4 @@ if '.qoi' not in Image.registered_extensions():
     Image.register_decoder('qoi', QoiDecoder)
     Image.register_encoder('qoi', QoiEncoder)
     Image.register_save(QoiImageFile.format, _save)
+    
